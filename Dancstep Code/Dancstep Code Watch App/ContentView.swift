@@ -12,6 +12,16 @@ struct ContentView: View {
     @State private var codeWord: [Int] = []  // Current symbol sequence (1=dot, 2=dash, 3=both)
     @State private var decodedText: String = ""  // Completed characters
 
+    // MARK: - Simultaneous Touch Detection
+    @State private var pendingButton: Int? = nil  // Which button is waiting (1=left, 2=right)
+    @State private var pendingWorkItem: DispatchWorkItem? = nil
+    @State private var leftPressed: Bool = false  // Visual feedback
+    @State private var rightPressed: Bool = false  // Visual feedback
+
+    // Timing threshold for "both" detection (in seconds)
+    // NOTE: 1.0s is for simulator testing with mouse. Reduce to ~0.12 for real watch.
+    private let simultaneousThreshold: Double = 1.0
+
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
@@ -45,29 +55,69 @@ struct ContentView: View {
 
                 // Left button (dot)
                 Circle()
-                    .fill(Color.black)
+                    .fill(leftPressed ? Color.gray : Color.black)
                     .overlay(Circle().stroke(Color.white, lineWidth: 2))
                     .frame(width: buttonSize, height: buttonSize)
                     .position(x: width * 0.28, y: buttonY)
                     .onTapGesture {
-                        buttonTapped(symbol: 1)
+                        handleButtonTap(button: 1)
                     }
 
                 // Right button (dash)
                 Circle()
-                    .fill(Color.white)
+                    .fill(rightPressed ? Color.gray : Color.white)
                     .overlay(Circle().stroke(Color.black, lineWidth: 2))
                     .frame(width: buttonSize, height: buttonSize)
                     .position(x: width * 0.72, y: buttonY)
                     .onTapGesture {
-                        buttonTapped(symbol: 2)
+                        handleButtonTap(button: 2)
                     }
             }
         }
     }
 
-    // MARK: - Actions
-    private func buttonTapped(symbol: Int) {
+    // MARK: - Touch Handling
+    private func handleButtonTap(button: Int) {
+        // Visual feedback
+        if button == 1 {
+            leftPressed = true
+        } else {
+            rightPressed = true
+        }
+
+        // Check if there's already a pending tap from the OTHER button
+        if let pending = pendingButton, pending != button {
+            // Both buttons tapped within threshold - it's a "both"!
+            pendingWorkItem?.cancel()
+            pendingWorkItem = nil
+            pendingButton = nil
+
+            // Reset visual state
+            leftPressed = false
+            rightPressed = false
+
+            // Register symbol 3 (both)
+            registerSymbol(3)
+        } else {
+            // First tap or same button again - start/restart the timer
+            pendingWorkItem?.cancel()
+            pendingButton = button
+
+            let workItem = DispatchWorkItem { [self] in
+                // Timer expired - register the single button tap
+                registerSymbol(button)
+                pendingButton = nil
+                leftPressed = false
+                rightPressed = false
+            }
+            pendingWorkItem = workItem
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + simultaneousThreshold, execute: workItem)
+        }
+    }
+
+    // MARK: - Symbol Registration
+    private func registerSymbol(_ symbol: Int) {
         codeWord.append(symbol)
 
         // Check if we have a valid character
@@ -159,12 +209,14 @@ struct DoubleSymbol: View {
             Circle()
                 .fill(Color.white)
 
-            // Black half (left) using a clip shape
+            // Black half (left) - clip to left half only
             Circle()
                 .fill(Color.black)
-                .clipShape(
-                    Rectangle()
-                        .offset(x: -size / 4)
+                .mask(
+                    HStack(spacing: 0) {
+                        Rectangle()
+                        Color.clear
+                    }
                 )
 
             // Border
