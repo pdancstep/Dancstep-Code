@@ -22,10 +22,28 @@ xcodebuild -project "Dancstep Code/Dancstep Code.xcodeproj" -scheme "Dancstep Co
 
 ## Architecture
 
-- **Target**: watchOS 26.2+
+- **Target**: watchOS 11.0+
 - **Swift Version**: 5.0
 - **UI Framework**: SwiftUI
 - **Concurrency**: Uses Swift's strict concurrency (`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`)
+
+## App Functionality
+
+The app is a custom text input system using two buttons (dot/dash) with simultaneous press detection for a third symbol ("both"). Symbol sequences decode into letters.
+
+### Key Timing Constants (in ContentView.swift)
+- `simultaneousThreshold`: 0.12s (120ms) - window for detecting both-button taps. Tuned for physical watch; increase if "both" is hard to trigger.
+
+### Input System
+- Left button = dot (symbol 1)
+- Right button = dash (symbol 2)
+- Both buttons together = both (symbol 3)
+- Symbols auto-decode when a valid sequence is completed
+
+## Development Notes
+
+- **Physical watch testing**: Debugger connection drops frequently - this is normal. App keeps running. Just rebuild (Cmd+R) to push changes.
+- **Symbol copy**: First build to a watch may trigger "copying shared cache symbols" which can take 20-30 min. Can be cancelled; only affects debugging, not the app itself.
 
 ### Project Structure
 
