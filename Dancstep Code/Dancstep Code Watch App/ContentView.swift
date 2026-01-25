@@ -19,8 +19,7 @@ struct ContentView: View {
     @State private var rightPressed: Bool = false  // Visual feedback
 
     // Timing threshold for "both" detection (in seconds)
-    // NOTE: 1.0s is for simulator testing with mouse. Reduce to ~0.12 for real watch.
-    private let simultaneousThreshold: Double = 1.0
+    private let simultaneousThreshold: Double = 0.12
 
     var body: some View {
         GeometryReader { geometry in
@@ -74,6 +73,7 @@ struct ContentView: View {
                     }
             }
         }
+        .persistentSystemOverlays(.hidden)
     }
 
     // MARK: - Touch Handling
